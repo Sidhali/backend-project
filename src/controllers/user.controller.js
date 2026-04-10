@@ -147,7 +147,7 @@ const loginUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { loggedInUser, accessToken, refreshToken },
+        { loggedInUser, accessToken },
         "User logged in successfully"
       )
     );
@@ -265,7 +265,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
       },
     },
     { new: true }
-  ).select("-password");
+  ).select("-password -refreshToken");
 
   return res.json(
     new ApiResponse(200, user, "Account details updated successfully")
@@ -327,11 +327,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
+  console.log("USERNAME:", username);
 
   if (!username?.trim()) {
     throw new ApiError(400, "Username is missing");
   }
-  const channel = User.aggregate([
+  const channel = await User.aggregate([
     {
       $match: {
         username: username?.toLowerCase(),
@@ -346,11 +347,11 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
-      lookup: {
+      $lookup: {
         from: "subscriptions",
         localField: "_id",
         foreignField: "subscriber",
-        as: "subscripedTo",
+        as: "subscribedTo",
       },
     },
     {
